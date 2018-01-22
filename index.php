@@ -104,7 +104,7 @@ if (isset($_GET['id'])) {
 
             <h1>Tutorial Title</h1>
             <h3><?php echo $video_title ?></h3>  <br>
-<!--            <h3>--><?php //echo $video_url ?><!--</h3>  <br>-->
+            <!--            <h3>--><?php //echo $video_url ?><!--</h3>  <br>-->
             <hr>
 
             <div style="max-width: 700px;
@@ -127,6 +127,26 @@ if (isset($_GET['id'])) {
 
             <h3>Lecture Description</h3>
             <p> <?php echo $video_desc; ?></p>
+        </div>
+
+
+        <div class="container text-center help-block">
+            <h3>File infromation</h3>
+            <?php
+
+            if (isset($_GET['id'])) {
+                require_once "lib/getid3/getid3.php";
+                $getID3 = new getID3;
+                $file = $getID3->analyze($video_url);
+                echo("Duration: " . $file['playtime_string'] .
+                    " / Dimensions: " . $file['video']['resolution_x'] . " wide by " . $file['video']['resolution_y'] . " tall" .
+                    " / Filesize: " . $file['filesize'] . " bytes<br />");
+
+            } else echo "no File Selected!!"
+
+
+            ?>
+
         </div>
     </div>
     <!-- /#page-content-wrapper -->
