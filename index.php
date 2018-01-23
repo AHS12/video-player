@@ -2,171 +2,119 @@
 /**
  * Created by PhpStorm.
  * User: MD AZIZUL HAKIM
- * Date: 18/01/2018
- * Time: 11:42 AM
+ * Date: 22/01/2018
+ * Time: 06:31 PM
  */
-
 ?>
-
 <?php
 @ob_start();
 if (session_status() != PHP_SESSION_ACTIVE) session_start();
-
-require_once "db/database.php"
-//?>
-<?php
-$video_id = null;
-$video_url = null;
-$video_desc = null;
-$video_title = null;
-if (isset($_GET['id'])) {
-
-    $video_id = $_GET['id'];
-
-
-    $db2 = new Database();
-    $query = "SELECT * FROM videos WHERE id = '$video_id'";
-    $result = $db2->query($query);
-    $video_data = mysqli_fetch_assoc($result);
-    $video_url = $video_data['video_url'];
-    $video_title = $video_data['title'];
-    $video_desc = $video_data['description'];
-}
 ?>
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
 <head>
-
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="">
-    <meta name="author" content="">
-
-    <title>Video Player</title>
-
-    <!-- Bootstrap core CSS -->
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Upload Video</title>
     <link href="lib/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <script type="text/javascript" src="lib/jQuery/jquery-3.2.1.min.js"></script>
 
-    <!-- Custom styles for this template -->
-    <link href="style/videoplayer.css" rel="stylesheet">
+
+    <script>
+        /* Script written by Adam Khoury @ DevelopPHP.com */
+        /* Video Tutorial: http://www.youtube.com/watch?v=EraNFJiY0Eg */
+        function _(el) {
+            return document.getElementById(el);
+        }
+        function uploadFile() {
+            var file = _("file1").files[0];
+            // alert(file.name+" | "+file.size+" | "+file.type);
+            var formdata = new FormData();
+            formdata.append("file1", file);
+            var ajax = new XMLHttpRequest();
+            ajax.upload.addEventListener("progress", progressHandler, false);
+            ajax.addEventListener("load", completeHandler, false);
+            ajax.addEventListener("error", errorHandler, false);
+            ajax.addEventListener("abort", abortHandler, false);
+            ajax.open("POST", "scripts/video_upload.php");
+            ajax.send(formdata);
+        }
+        function progressHandler(event) {
+            _("loaded_n_total").innerHTML = "Uploaded " + event.loaded + " bytes of " + event.total;
+            var percent = (event.loaded / event.total) * 100;
+            _("progressBar").value = Math.round(percent);
+            _("status").innerHTML = Math.round(percent) + "% uploaded... please wait";
+        }
+        function completeHandler(event) {
+            _("status").innerHTML = event.target.responseText;
+            _("progressBar").value = 0;
+        }
+        function errorHandler(event) {
+            _("status").innerHTML = "Upload Failed";
+        }
+        function abortHandler(event) {
+            _("status").innerHTML = "Upload Aborted";
+        }
+
+    </script>
+
 
 </head>
-
 <body>
+<h3 class="text-center">Upload Course Video</h3>
+<h4 class="text-center alert alert-danger">Note: Mamximum video Limit is 200mb and video formate must me .mp4</h4>
+<hr>
+<div style="" class="col-md-offset-5">
+    <form id="upload_form" enctype="multipart/form-data" method="post">
 
-<div id="wrapper">
+        <input class="text-center btn btn-info" type="file" name="fileup" id="file1"><br>
+        <input class="text-center btn btn-success" type="button" name="upload" value="Upload video"
+               onclick="uploadFile()"> <br> <br>
+        <progress id="progressBar" value="0" max="100" style="width:300px;"></progress>
+        <h3 id="status"></h3> <br>
 
-    <!-- Sidebar -->
-    <div id="sidebar-wrapper">
-        <ul class="sidebar-nav">
-            <li class="sidebar-brand">
-                <a href="#">
-                    <!--                        --><?php //echo $video_title; ?>
-                    Tutorial Title
-                </a>
-            </li>
-            <?php
-            $db = new Database();
-            $query = "SELECT * FROM videos";
-            $result = $db->query($query);
+        <!--        <p id="loaded_n_total"></p>-->
+    </form>
 
-            while ($row = mysqli_fetch_assoc($result)) {
-                $video_id = $row['id'];
-                $video_name = $row['vid_name'];
-
-                ?>
-
-
-                <li>
-                    <a href="index.php?id=<?php echo $video_id ?>"><?php echo $video_name ?></a>
-                </li>
-
-
-                <?php
-            }
-
-            ?>
-
-        </ul>
-    </div>
-
-
-    <!-- /#sidebar-wrapper -->
-
-    <!-- Page Content -->
-    <div id="page-content-wrapper">
-        <div>
-            <a href="#menu-toggle" class="btn btn-success" id="menu-toggle">Course Playlist</a>
-        </div>
-        <div class="container text-center">
-
-            <h1>Tutorial Title</h1>
-            <h3><?php echo $video_title ?></h3>  <br>
-            <!--            <h3>--><?php //echo $video_url ?><!--</h3>  <br>-->
-            <hr>
-
-            <div style="max-width: 700px;
-                        max-height: 400px;
-                        margin-right: auto;
-                        margin-left: auto;">
-                <div class="embed-responsive embed-responsive-16by9">
-                    <video controls loop autoplay class="embed-responsive-item">
-                        <source src="<?php echo $video_url ?>" type="video/mp4">
-                    </video>
-                </div>
-            </div>
-
-        </div>
-
-
-        <hr>
-
-        <div class=" container text-center">
-
-            <h3>Lecture Description</h3>
-            <p> <?php echo $video_desc; ?></p>
-        </div>
-
-
-        <div class="container text-center help-block">
-            <h3>File infromation</h3>
-            <?php
-
-            if (isset($_GET['id'])) {
-                require_once "lib/getid3/getid3.php";
-                $getID3 = new getID3;
-                $file = $getID3->analyze($video_url);
-                echo("Duration: " . $file['playtime_string'] .
-                    " / Dimensions: " . $file['video']['resolution_x'] . " wide by " . $file['video']['resolution_y'] . " tall" .
-                    " / Filesize: " . $file['filesize'] . " bytes<br />");
-
-            } else echo "no File Selected!!"
-
-
-            ?>
-
-        </div>
-    </div>
-    <!-- /#page-content-wrapper -->
 
 </div>
-<!-- /#wrapper -->
 
-<!-- Bootstrap core JavaScript -->
-<script src="lib/jQuery/jquery-3.2.1.min.js"></script>
+
+<div>
+    <form class="col-md-6 col-md-offset-4" method="post" enctype="multipart/form-data"
+          action="scripts/video_record.php">
+
+
+        <?php
+
+        if (isset($_SESSION["successMsg"])) {
+            echo "<h2 id=\"message\" class=\"text-center alert alert-danger\"><strong>Video Record inserted!</strong></h2>";
+        }
+        session_unset();
+        ?>
+
+
+        <div class="input-group">
+            <span class="input-group-addon" id="basic-addon1">Title</span>
+            <input type="text" class="form-control" placeholder="Title" name="title" aria-describedby="basic-addon1"
+                   required>
+        </div>
+        <br>
+        <div class="input-group">
+            <span class="input-group-addon" id="basic-addon1">Description</span>
+            <input type="text" class="form-control" placeholder="Description" name="desc"
+                   aria-describedby="basic-addon1" required>
+        </div>
+        <br>
+        <div>
+            <button class="btn btn-success" name="submitvideodata">Submit</button>
+        </div>
+    </form>
+</div>
+
+
 <script src="lib/bootstrap/js/bootstrap.min.js"></script>
-
-<!-- Menu Toggle Script -->
-<script>
-    $("#menu-toggle").click(function (e) {
-        e.preventDefault();
-        $("#wrapper").toggleClass("toggled");
-    });
-</script>
-
 </body>
-
 </html>
-

@@ -16,218 +16,131 @@
 // MySQL extension was reworked for SQLite3 by Karl G. Holz <newaeonØmac*com>  //
 //                                                                            ///
 /////////////////////////////////////////////////////////////////////////////////
+
 /**
-* This is a caching extension for getID3(). It works the exact same
-* way as the getID3 class, but return cached information much faster
-*
-*    Normal getID3 usage (example):
-*
-*       require_once 'getid3/getid3.php';
-*       $getID3 = new getID3;
-*       $getID3->encoding = 'UTF-8';
-*       $info1 = $getID3->analyze('file1.flac');
-*       $info2 = $getID3->analyze('file2.wv');
-*
-*    getID3_cached usage:
-*
-*       require_once 'getid3/getid3.php';
-*       require_once 'getid3/extension.cache.sqlite3.php';
-*       // all parameters are optional, defaults are:
-*       $getID3 = new getID3_cached_sqlite3($table='getid3_cache', $hide=FALSE);
-*       $getID3->encoding = 'UTF-8';
-*       $info1 = $getID3->analyze('file1.flac');
-*       $info2 = $getID3->analyze('file2.wv');
-*
-*
-* Supported Cache Types    (this extension)
-*
-*   SQL Databases:
-*
-*   cache_type          cache_options
-*   -------------------------------------------------------------------
-*   mysql               host, database, username, password
-*
-*   sqlite3             table='getid3_cache', hide=false        (PHP5)
-*
-*
-* ***  database file will be stored in the same directory as this script,
-* ***  webserver must have write access to that directory!
-* ***  set $hide to TRUE to prefix db file with .ht to pervent access from web client
-* ***  this is a default setting in the Apache configuration:
-*
-* The following lines prevent .htaccess and .htpasswd files from being viewed by Web clients.
-*
-* <Files ~ "^\.ht">
-*     Order allow,deny
-*     Deny from all
-*     Satisfy all
-* </Files>
-*
-********************************************************************************
-*
-*   -------------------------------------------------------------------
-*   DBM-Style Databases:    (use extension.cache.dbm)
-*
-*   cache_type          cache_options
-*   -------------------------------------------------------------------
-*   gdbm                dbm_filename, lock_filename
-*   ndbm                dbm_filename, lock_filename
-*   db2                 dbm_filename, lock_filename
-*   db3                 dbm_filename, lock_filename
-*   db4                 dbm_filename, lock_filename  (PHP5 required)
-*
-*   PHP must have write access to both dbm_filename and lock_filename.
-*
-* Recommended Cache Types
-*
-*   Infrequent updates, many reads      any DBM
-*   Frequent updates                    mysql
-********************************************************************************
-*
-* IMHO this is still a bit slow, I'm using this with MP4/MOV/ M4v files
-* there is a plan to add directory scanning and analyzing to make things work much faster
-*
-*
-*/
-class getID3_cached_sqlite3 extends getID3 {
+ * This is a caching extension for getID3(). It works the exact same
+ * way as the getID3 class, but return cached information much faster
+ *
+ *    Normal getID3 usage (example):
+ *
+ *       require_once 'getid3/getid3.php';
+ *       $getID3 = new getID3;
+ *       $getID3->encoding = 'UTF-8';
+ *       $info1 = $getID3->analyze('file1.flac');
+ *       $info2 = $getID3->analyze('file2.wv');
+ *
+ *    getID3_cached usage:
+ *
+ *       require_once 'getid3/getid3.php';
+ *       require_once 'getid3/extension.cache.sqlite3.php';
+ *       // all parameters are optional, defaults are:
+ *       $getID3 = new getID3_cached_sqlite3($table='getid3_cache', $hide=FALSE);
+ *       $getID3->encoding = 'UTF-8';
+ *       $info1 = $getID3->analyze('file1.flac');
+ *       $info2 = $getID3->analyze('file2.wv');
+ *
+ *
+ * Supported Cache Types    (this extension)
+ *
+ *   SQL Databases:
+ *
+ *   cache_type          cache_options
+ *   -------------------------------------------------------------------
+ *   mysql               host, database, username, password
+ *
+ *   sqlite3             table='getid3_cache', hide=false        (PHP5)
+ *
+ *
+ * ***  database file will be stored in the same directory as this script,
+ * ***  webserver must have write access to that directory!
+ * ***  set $hide to TRUE to prefix db file with .ht to pervent access from web client
+ * ***  this is a default setting in the Apache configuration:
+ *
+ * The following lines prevent .htaccess and .htpasswd files from being viewed by Web clients.
+ *
+ * <Files ~ "^\.ht">
+ *     Order allow,deny
+ *     Deny from all
+ *     Satisfy all
+ * </Files>
+ *
+ ********************************************************************************
+ *
+ *   -------------------------------------------------------------------
+ *   DBM-Style Databases:    (use extension.cache.dbm)
+ *
+ *   cache_type          cache_options
+ *   -------------------------------------------------------------------
+ *   gdbm                dbm_filename, lock_filename
+ *   ndbm                dbm_filename, lock_filename
+ *   db2                 dbm_filename, lock_filename
+ *   db3                 dbm_filename, lock_filename
+ *   db4                 dbm_filename, lock_filename  (PHP5 required)
+ *
+ *   PHP must have write access to both dbm_filename and lock_filename.
+ *
+ * Recommended Cache Types
+ *
+ *   Infrequent updates, many reads      any DBM
+ *   Frequent updates                    mysql
+ ********************************************************************************
+ *
+ * IMHO this is still a bit slow, I'm using this with MP4/MOV/ M4v files
+ * there is a plan to add directory scanning and analyzing to make things work much faster
+ *
+ *
+ */
+class getID3_cached_sqlite3 extends getID3
+{
 
-	/**
-	* __construct()
-	* @param string $table holds name of sqlite table
-	*/
-	public function __construct($table='getid3_cache', $hide=false) {
-		$this->table = $table; // Set table
-		$file = dirname(__FILE__).'/'.basename(__FILE__, 'php').'sqlite';
-		if ($hide) {
-			$file = dirname(__FILE__).'/.ht.'.basename(__FILE__, 'php').'sqlite';
-		}
-		$this->db = new SQLite3($file);
-		$db = $this->db;
-		$this->create_table();   // Create cache table if not exists
-		$version = '';
-		$sql = $this->getQuery('version_check');
-		$stmt = $db->prepare($sql);
-		$stmt->bindValue(':filename', getID3::VERSION, SQLITE3_TEXT);
-		$result = $stmt->execute();
-		list($version) = $result->fetchArray();
-		if ($version != getID3::VERSION) { // Check version number and clear cache if changed
-			$this->clear_cache();
-		}
-		parent::__construct();
-	}
+    /**
+     * hold the sqlite db
+     * @var SQLite3 Resource
+     */
+    private $db;
+    /**
+     * table to use for caching
+     * @var string $table
+     */
+    private $table;
 
-	/**
-	* close the database connection
-	*/
-	public function __destruct() {
-		$db=$this->db;
-		$db->close();
-	}
+    /**
+     * __construct()
+     * @param string $table holds name of sqlite table
+     */
+    public function __construct($table = 'getid3_cache', $hide = false)
+    {
+        $this->table = $table; // Set table
+        $file = dirname(__FILE__) . '/' . basename(__FILE__, 'php') . 'sqlite';
+        if ($hide) {
+            $file = dirname(__FILE__) . '/.ht.' . basename(__FILE__, 'php') . 'sqlite';
+        }
+        $this->db = new SQLite3($file);
+        $db = $this->db;
+        $this->create_table();   // Create cache table if not exists
+        $version = '';
+        $sql = $this->getQuery('version_check');
+        $stmt = $db->prepare($sql);
+        $stmt->bindValue(':filename', getID3::VERSION, SQLITE3_TEXT);
+        $result = $stmt->execute();
+        list($version) = $result->fetchArray();
+        if ($version != getID3::VERSION) { // Check version number and clear cache if changed
+            $this->clear_cache();
+        }
+        parent::__construct();
+    }
 
-	/**
-	* hold the sqlite db
-	* @var SQLite3 Resource
-	*/
-	private $db;
-
-	/**
-	* table to use for caching
-	* @var string $table
-	*/
-	private $table;
-
-	/**
-	* clear the cache
-	* @access private
-	* @return SQLite3Result
-	*/
-	private function clear_cache() {
-		$db = $this->db;
-		$sql = $this->getQuery('delete_cache');
-		$db->exec($sql);
-		$sql = $this->getQuery('set_version');
-		$stmt = $db->prepare($sql);
-		$stmt->bindValue(':filename', getID3::VERSION, SQLITE3_TEXT);
-		$stmt->bindValue(':dirname', getID3::VERSION, SQLITE3_TEXT);
-		$stmt->bindValue(':val', getID3::VERSION, SQLITE3_TEXT);
-		return $stmt->execute();
-	}
-
-	/**
-	* analyze file and cache them, if cached pull from the db
-	* @param string $filename
-	* @return boolean
-	*/
-	public function analyze($filename, $filesize=null, $original_filename='') {
-		if (!file_exists($filename)) {
-			return false;
-		}
-		// items to track for caching
-		$filetime = filemtime($filename);
-		$filesize_real = filesize($filename);
-		// this will be saved for a quick directory lookup of analized files
-		// ... why do 50 seperate sql quries when you can do 1 for the same result
-		$dirname  = dirname($filename);
-		// Lookup file
-		$db = $this->db;
-		$sql = $this->getQuery('get_id3_data');
-		$stmt = $db->prepare($sql);
-		$stmt->bindValue(':filename', $filename,      SQLITE3_TEXT);
-		$stmt->bindValue(':filesize', $filesize_real, SQLITE3_INTEGER);
-		$stmt->bindValue(':filetime', $filetime,      SQLITE3_INTEGER);
-		$res = $stmt->execute();
-		list($result) = $res->fetchArray();
-		if (count($result) > 0 ) {
-			return unserialize(base64_decode($result));
-		}
-		// if it hasn't been analyzed before, then do it now
-		$analysis = parent::analyze($filename, $filesize, $original_filename);
-		// Save result
-		$sql = $this->getQuery('cache_file');
-		$stmt = $db->prepare($sql);
-		$stmt->bindValue(':filename', $filename,                           SQLITE3_TEXT);
-		$stmt->bindValue(':dirname',  $dirname,                            SQLITE3_TEXT);
-		$stmt->bindValue(':filesize', $filesize_real,                      SQLITE3_INTEGER);
-		$stmt->bindValue(':filetime', $filetime,                           SQLITE3_INTEGER);
-		$stmt->bindValue(':atime',    time(),                              SQLITE3_INTEGER);
-		$stmt->bindValue(':val',      base64_encode(serialize($analysis)), SQLITE3_TEXT);
-		$res = $stmt->execute();
-		return $analysis;
-	}
-
-	/**
-	* create data base table
-	* this is almost the same as MySQL, with the exception of the dirname being added
-	* @return bool
-	*/
-	private function create_table() {
-		$db = $this->db;
-		$sql = $this->getQuery('make_table');
-		return $db->exec($sql);
-	}
-
-	/**
-	* get cached directory
-	*
-	* This function is not in the MySQL extention, it's ment to speed up requesting multiple files
-	* which is ideal for podcasting, playlists, etc.
-	*
-	* @access public
-	* @param string $dir directory to search the cache database for
-	* @return array return an array of matching id3 data
-	*/
-	public function get_cached_dir($dir) {
-		$db = $this->db;
-		$rows = array();
-		$sql = $this->getQuery('get_cached_dir');
-		$stmt = $db->prepare($sql);
-		$stmt->bindValue(':dirname', $dir, SQLITE3_TEXT);
-		$res = $stmt->execute();
-		while ($row=$res->fetchArray()) {
-			$rows[] = unserialize(base64_decode($row));
-		}
-		return $rows;
-	}
+    /**
+     * create data base table
+     * this is almost the same as MySQL, with the exception of the dirname being added
+     * @return bool
+     */
+    private function create_table()
+    {
+        $db = $this->db;
+        $sql = $this->getQuery('make_table');
+        return $db->exec($sql);
+    }
 
     /**
      * returns NULL if query is not found
@@ -263,16 +176,112 @@ class getID3_cached_sqlite3 extends getID3 {
             default:
                 return null;
         }
-	}
-	/**
-	* use the magical __get() for sql queries
-	*
-	* access as easy as $this->{case name}, returns NULL if query is not found
-	*
-	* @deprecated use getQuery() instead
-	*/
-	public function __get($name) {
-		return $this->getQuery($name);
-	}
+    }
+
+    /**
+     * clear the cache
+     * @access private
+     * @return SQLite3Result
+     */
+    private function clear_cache()
+    {
+        $db = $this->db;
+        $sql = $this->getQuery('delete_cache');
+        $db->exec($sql);
+        $sql = $this->getQuery('set_version');
+        $stmt = $db->prepare($sql);
+        $stmt->bindValue(':filename', getID3::VERSION, SQLITE3_TEXT);
+        $stmt->bindValue(':dirname', getID3::VERSION, SQLITE3_TEXT);
+        $stmt->bindValue(':val', getID3::VERSION, SQLITE3_TEXT);
+        return $stmt->execute();
+    }
+
+    /**
+     * close the database connection
+     */
+    public function __destruct()
+    {
+        $db = $this->db;
+        $db->close();
+    }
+
+    /**
+     * analyze file and cache them, if cached pull from the db
+     * @param string $filename
+     * @return boolean
+     */
+    public function analyze($filename, $filesize = null, $original_filename = '')
+    {
+        if (!file_exists($filename)) {
+            return false;
+        }
+        // items to track for caching
+        $filetime = filemtime($filename);
+        $filesize_real = filesize($filename);
+        // this will be saved for a quick directory lookup of analized files
+        // ... why do 50 seperate sql quries when you can do 1 for the same result
+        $dirname = dirname($filename);
+        // Lookup file
+        $db = $this->db;
+        $sql = $this->getQuery('get_id3_data');
+        $stmt = $db->prepare($sql);
+        $stmt->bindValue(':filename', $filename, SQLITE3_TEXT);
+        $stmt->bindValue(':filesize', $filesize_real, SQLITE3_INTEGER);
+        $stmt->bindValue(':filetime', $filetime, SQLITE3_INTEGER);
+        $res = $stmt->execute();
+        list($result) = $res->fetchArray();
+        if (count($result) > 0) {
+            return unserialize(base64_decode($result));
+        }
+        // if it hasn't been analyzed before, then do it now
+        $analysis = parent::analyze($filename, $filesize, $original_filename);
+        // Save result
+        $sql = $this->getQuery('cache_file');
+        $stmt = $db->prepare($sql);
+        $stmt->bindValue(':filename', $filename, SQLITE3_TEXT);
+        $stmt->bindValue(':dirname', $dirname, SQLITE3_TEXT);
+        $stmt->bindValue(':filesize', $filesize_real, SQLITE3_INTEGER);
+        $stmt->bindValue(':filetime', $filetime, SQLITE3_INTEGER);
+        $stmt->bindValue(':atime', time(), SQLITE3_INTEGER);
+        $stmt->bindValue(':val', base64_encode(serialize($analysis)), SQLITE3_TEXT);
+        $res = $stmt->execute();
+        return $analysis;
+    }
+
+    /**
+     * get cached directory
+     *
+     * This function is not in the MySQL extention, it's ment to speed up requesting multiple files
+     * which is ideal for podcasting, playlists, etc.
+     *
+     * @access public
+     * @param string $dir directory to search the cache database for
+     * @return array return an array of matching id3 data
+     */
+    public function get_cached_dir($dir)
+    {
+        $db = $this->db;
+        $rows = array();
+        $sql = $this->getQuery('get_cached_dir');
+        $stmt = $db->prepare($sql);
+        $stmt->bindValue(':dirname', $dir, SQLITE3_TEXT);
+        $res = $stmt->execute();
+        while ($row = $res->fetchArray()) {
+            $rows[] = unserialize(base64_decode($row));
+        }
+        return $rows;
+    }
+
+    /**
+     * use the magical __get() for sql queries
+     *
+     * access as easy as $this->{case name}, returns NULL if query is not found
+     *
+     * @deprecated use getQuery() instead
+     */
+    public function __get($name)
+    {
+        return $this->getQuery($name);
+    }
 
 }
