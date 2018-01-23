@@ -26,7 +26,7 @@ if (isset($_FILES['file1']['name'])) {
         exit();
     } else {
         if ($fileType == "video/mp4") {
-            if ($fileSize > 200000000) {
+            if ($fileSize < 200000000) {
                 if (move_uploaded_file($fileTemp, $filePath)) {
                     echo "Upload completed";
                 } else {

@@ -42,7 +42,7 @@ if (session_status() != PHP_SESSION_ACTIVE) session_start();
             ajax.send(formdata);
         }
         function progressHandler(event) {
-            _("loaded_n_total").innerHTML = "Uploaded " + event.loaded + " bytes of " + event.total;
+//            _("loaded_n_total").innerHTML = "Uploaded " + event.loaded + " bytes of " + event.total;
             var percent = (event.loaded / event.total) * 100;
             _("progressBar").value = Math.round(percent);
             _("status").innerHTML = Math.round(percent) + "% uploaded... please wait";
@@ -75,7 +75,7 @@ if (session_status() != PHP_SESSION_ACTIVE) session_start();
         <progress id="progressBar" value="0" max="100" style="width:300px;"></progress>
         <h3 id="status"></h3> <br>
 
-        <!--        <p id="loaded_n_total"></p>-->
+<!--        <p id="loaded_n_total"></p>-->
     </form>
 
 
