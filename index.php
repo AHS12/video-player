@@ -62,11 +62,11 @@ if (session_status() != PHP_SESSION_ACTIVE) session_start();
 
 
 </head>
-<body>
+<body class="container">
 <h3 class="text-center">Upload Course Video</h3>
 <h4 class="text-center alert alert-danger">Note: Mamximum video Limit is 200mb and video formate must me .mp4</h4>
 <hr>
-<div style="" class="col-md-offset-5">
+<div style="" class="col-md-offset-3">
     <form id="upload_form" enctype="multipart/form-data" method="post">
 
         <input class="text-center btn btn-info" type="file" name="fileup" id="file1"><br>
@@ -75,7 +75,7 @@ if (session_status() != PHP_SESSION_ACTIVE) session_start();
         <progress id="progressBar" value="0" max="100" style="width:300px;"></progress>
         <h3 id="status"></h3> <br>
 
-<!--        <p id="loaded_n_total"></p>-->
+        <!--        <p id="loaded_n_total"></p>-->
     </form>
 
 
@@ -83,7 +83,7 @@ if (session_status() != PHP_SESSION_ACTIVE) session_start();
 
 
 <div>
-    <form class="col-md-6 col-md-offset-4" method="post" enctype="multipart/form-data"
+    <form class="col-md-offset-3" method="post" enctype="multipart/form-data"
           action="scripts/video_record.php">
 
 
@@ -104,14 +104,100 @@ if (session_status() != PHP_SESSION_ACTIVE) session_start();
         <br>
         <div class="input-group">
             <span class="input-group-addon" id="basic-addon1">Description</span>
-            <input type="text" class="form-control" placeholder="Description" name="desc"
-                   aria-describedby="basic-addon1" required>
+            <textarea type="text" class="form-control" placeholder="Description" name="desc"
+                      aria-describedby="basic-addon1" required></textarea>
         </div>
         <br>
         <div>
             <button class="btn btn-success" name="submitvideodata">Submit</button>
         </div>
     </form>
+</div>
+
+
+<!-- Uploded table -->
+
+<div>
+
+    <hr>
+    <h3>Uploded Video List</h3>
+    <hr>
+
+    <table class="table table-responsive">
+        <thead>
+        <tr class="bg-success">
+            <th>Video Serial</th>
+            <th>Video Title</th>
+            <th>Video Description</th>
+            <th>Length/Duration</th>
+
+        </tr>
+        </thead>
+
+        <?php
+        include "db/database.php";
+        require_once "lib/getid3/getid3.php";
+        $getID3 = new getID3;
+
+        $db = new Database();
+
+        $query = "SELECT * FROM videos";
+
+        $result = $db->query($query);
+
+        while ($row = mysqli_fetch_assoc($result)) {
+
+            $video_id = $row['id'];
+            $video_url = $row['video_url'];
+            $video_serial = $row['serial'];
+            $video_title = $row['title'];
+            $video_desc = $row['description'];
+
+
+            $min = " minutes";
+            if(empty($video_title) && empty($video_desc)){
+                $video_title = " No DATA";
+                $video_desc = " No DATA";
+            }
+
+            $fileData = $getID3->analyze($video_url);
+            $video_duration = $fileData['playtime_string'];
+
+
+            echo "
+                    <tr>
+                    <td>
+                    $video_serial
+                    </td>
+                    
+                    
+                    <td>
+                    $video_title
+                    </td>
+                    
+                   
+                    <td>
+                    $video_desc
+                    </td>
+                    
+                    <td>
+                    $video_duration.$min
+                    </td>
+                    </tr>
+                    
+                    ";
+
+        }
+
+
+        ?>
+
+        <tbody>
+
+
+        </tbody>
+    </table>
+
 </div>
 
 

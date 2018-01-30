@@ -7,8 +7,10 @@
  */
 
 
+@ob_start();
+if (session_status() != PHP_SESSION_ACTIVE) session_start();
 
-session_start();
+
 if (isset($_FILES['file1']['name'])) {
     $fileName = $_FILES['file1']['name'];
     $fileTemp = $_FILES['file1']['tmp_name'];
@@ -40,11 +42,3 @@ if (isset($_FILES['file1']['name'])) {
 
 
 
-//if (isset($_POST['submit_image'])) {
-//    $fileName = $_FILES['upload_file']['name'];
-//    $uploadfile = $_FILES["upload_file"]["tmp_name"];
-//    $filePath = "../videos/" . $fileName;
-//    move_uploaded_file($_FILES["upload_file"]["tmp_name"], $filePath);
-//    header("location: ../index.php");
-//    exit();
-//}

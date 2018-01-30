@@ -5,7 +5,9 @@
  * Date: 23/01/2018
  * Time: 01:01 PM
  */
-session_start();
+
+@ob_start();
+if (session_status() != PHP_SESSION_ACTIVE) session_start();
 
 
 require_once "../db/database.php";
@@ -19,16 +21,29 @@ if (isset($_POST['submitvideodata'])) {
 
     $newFileName = $_SESSION['fileName'];
 
-    echo $videoTitle . $videoDesc . $newFileName . $video_url;
+//    echo $videoTitle . $videoDesc . $newFileName . $video_url;
 
-    $query = "INSERT INTO videoplayer.videos(title, vid_name, video_url, description) VALUES ";
-    $query .= "('$videoTitle','$newFileName','$video_url','$videoDesc')";
+
+    //serial
+
+    $video_serial = 0;
+    $serial_query = "SELECT * FROM videos";
+    $serial_result = $db->query($serial_query);
+    $serial_row = mysqli_num_rows($serial_result);
+    $video_serial = $serial_row + 1;
+
+    //week
+    $video_week = ceil($video_serial / 7);
+
+
+    $query = "INSERT INTO videoplayer.videos(serial,title, vid_name, video_url, description,week) VALUES ";
+    $query .= "('$video_serial','$videoTitle','$newFileName','$video_url','$videoDesc','$video_week')";
 
     $result = $db->query($query);
     if (!$result) {
         die("Failed!!!" . mysqli_error($db->connection));
     }
-    
+
     session_unset();
     header("location: ../index.php");
     $_SESSION['successMsg'] = 1;
